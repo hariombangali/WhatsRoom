@@ -6,6 +6,23 @@ const FALLBACK_ANDROID_URL = "http://10.0.2.2:4000";
 const FALLBACK_LOCAL_URL = "http://localhost:4000";
 const FALLBACK_HOST_PORT = "4000";
 
+function isLocalOrPrivateHost(hostname) {
+  const host = String(hostname || "").trim().toLowerCase();
+  if (!host) return false;
+
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+
+  const match172 = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/);
+  if (match172) {
+    const second = Number.parseInt(match172[1], 10);
+    if (Number.isFinite(second) && second >= 16 && second <= 31) return true;
+  }
+
+  return false;
+}
+
 function normalizeBaseUrl(input) {
   const value = String(input || "").trim().replace(/\/+$/, "");
   if (!value) return null;
@@ -40,6 +57,7 @@ function getConfiguredHostFallbackUrl(configuredUrl) {
   try {
     const u = new URL(configuredUrl);
     if (u.port === FALLBACK_HOST_PORT) return null;
+    if (!isLocalOrPrivateHost(u.hostname)) return null;
     return `${u.protocol}//${u.hostname}:${FALLBACK_HOST_PORT}`;
   } catch {
     return null;

@@ -177,7 +177,18 @@ export default function HomeScreen() {
             disabled={busy}
             leftIcon="add-circle-outline"
             rightIcon="arrow-forward"
+            tone="mint"
           />
+          <View style={styles.buttonMetaRow}>
+            <View style={[styles.buttonMetaChip, styles.buttonMetaMint]}>
+              <Ionicons name="flash-outline" size={12} color="#8AFFE5" />
+              <Text style={styles.buttonMetaText}>Instant ID</Text>
+            </View>
+            <View style={[styles.buttonMetaChip, styles.buttonMetaMint]}>
+              <Ionicons name="shield-checkmark-outline" size={12} color="#8AFFE5" />
+              <Text style={styles.buttonMetaText}>No signup</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -206,7 +217,18 @@ export default function HomeScreen() {
             disabled={busy}
             leftIcon="log-in-outline"
             rightIcon="chatbubble-ellipses-outline"
+            tone="azure"
           />
+          <View style={styles.buttonMetaRow}>
+            <View style={[styles.buttonMetaChip, styles.buttonMetaAzure]}>
+              <Ionicons name="sync-outline" size={12} color="#A7CEFF" />
+              <Text style={styles.buttonMetaText}>Real-time sync</Text>
+            </View>
+            <View style={[styles.buttonMetaChip, styles.buttonMetaAzure]}>
+              <Ionicons name="albums-outline" size={12} color="#A7CEFF" />
+              <Text style={styles.buttonMetaText}>Shared history</Text>
+            </View>
+          </View>
         </View>
 
         {quickRooms.length > 0 && (
@@ -334,6 +356,25 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   cardSub: { marginTop: 7, color: colors.subtext, fontSize: 12, lineHeight: 16 },
   profileHint: { marginTop: 9, color: "rgba(188, 227, 255, 0.72)", fontSize: 11, fontWeight: "700" },
+  buttonMetaRow: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  buttonMetaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6
+  },
+  buttonMetaMint: {
+    borderColor: "rgba(107, 255, 221, 0.38)",
+    backgroundColor: "rgba(107, 255, 221, 0.12)"
+  },
+  buttonMetaAzure: {
+    borderColor: "rgba(147, 194, 255, 0.38)",
+    backgroundColor: "rgba(147, 194, 255, 0.12)"
+  },
+  buttonMetaText: { color: "#D9ECFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.2 },
 
   quickGrid: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
   quickChip: {

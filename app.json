@@ -24,6 +24,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "API_BASE_URL": "https://whatsroom-backend-kz7s.onrender.com",
+      "eas": {
+        "projectId": "7bc2b4e1-fe53-4a75-b0ff-2d87760a80aa"
+      }
     }
   }
 }

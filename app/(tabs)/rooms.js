@@ -24,6 +24,7 @@ import { EmptyState } from "../../src/components/EmptyState";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { TextField } from "../../src/components/TextField";
 import { formatRelativeTime } from "../../src/utils/time";
+import { playClearTone, playDeleteTone, primeActionTone, unloadActionTone } from "../../src/utils/sound";
 
 export default function RoomsScreen() {
   const [rooms, setRooms] = useState([]);
@@ -44,6 +45,13 @@ export default function RoomsScreen() {
       load();
     }, [load])
   );
+
+  useEffect(() => {
+    primeActionTone().catch(() => {});
+    return () => {
+      unloadActionTone().catch(() => {});
+    };
+  }, []);
 
   const filteredRooms = useMemo(() => {
     const q = String(query || "").trim().toUpperCase();
@@ -78,8 +86,13 @@ export default function RoomsScreen() {
         text: "Remove",
         style: "destructive",
         onPress: async () => {
-          await removeRecentRoom(roomId);
-          await load();
+          try {
+            await removeRecentRoom(roomId);
+            await load();
+            playDeleteTone().catch(() => {});
+          } catch {
+            Alert.alert("Remove failed", "Could not remove room.");
+          }
         }
       }
     ]);
@@ -184,8 +197,13 @@ export default function RoomsScreen() {
           variant="secondary"
           leftIcon="archive-outline"
           onPress={async () => {
-            await clearRecentRooms();
-            await load();
+            try {
+              await clearRecentRooms();
+              await load();
+              playClearTone().catch(() => {});
+            } catch {
+              Alert.alert("Clear failed", "Could not clear recent rooms.");
+            }
           }}
           disabled={rooms.length === 0}
         />
