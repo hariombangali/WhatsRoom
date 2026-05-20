@@ -2,6 +2,8 @@ import { Modal, View, Text, StyleSheet, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { CHAT_THEME_LIST } from "../utils/themes";
+import { radii } from "../theme/radii";
+import { typography, fontFamilies } from "../theme/typography";
 
 export function ThemePicker({ visible, currentThemeId, onSelect, onClose }) {
   return (
@@ -29,8 +31,12 @@ export function ThemePicker({ visible, currentThemeId, onSelect, onClose }) {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <View style={[styles.swatchBubble, { backgroundColor: theme.theirsBubble }]} />
-                    <View style={[styles.swatchBubble, styles.swatchBubbleMine, { backgroundColor: theme.mineBubble }]} />
+                    <View style={[styles.swatchBubble, { backgroundColor: theme.theirsBubble }]}>
+                      <Text style={[styles.swatchBubbleText, { color: theme.theirsText }]}>Hi!</Text>
+                    </View>
+                    <View style={[styles.swatchBubble, styles.swatchBubbleMine, { backgroundColor: theme.mineBubble }]}>
+                      <Text style={[styles.swatchBubbleText, { color: theme.mineText }]}>Hey!</Text>
+                    </View>
                   </LinearGradient>
 
                   <View style={{ flex: 1 }}>
@@ -38,7 +44,7 @@ export function ThemePicker({ visible, currentThemeId, onSelect, onClose }) {
                     <Text style={styles.rowHint}>{active ? "Currently active" : "Tap to apply"}</Text>
                   </View>
 
-                  {active && <Ionicons name="checkmark-circle" size={20} color={theme.accent} />}
+                  {active && <Ionicons name="checkmark-circle" size={22} color={theme.accent} />}
                 </Pressable>
               );
             })}
@@ -62,21 +68,21 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#0B1626",
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: radii.xl,
+    padding: 18,
     borderWidth: 1,
     borderColor: "rgba(188, 220, 255, 0.18)"
   },
   header: { flexDirection: "row", alignItems: "center", gap: 8 },
-  title: { color: "#E9EDF1", fontSize: 17, fontWeight: "900" },
-  sub: { marginTop: 6, color: "rgba(233,237,241,0.66)", fontSize: 12 },
-  list: { marginTop: 12, gap: 8 },
+  title: { ...typography.h2, color: "#E9EDF1" },
+  sub: { marginTop: 6, color: "rgba(233,237,241,0.66)", fontSize: 12, lineHeight: 17 },
+  list: { marginTop: 14, gap: 10 },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     padding: 10,
-    borderRadius: 14,
+    borderRadius: radii.md,
     borderWidth: 1,
     borderColor: "rgba(193, 215, 246, 0.18)",
     backgroundColor: "rgba(161, 189, 225, 0.06)"
@@ -86,31 +92,33 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(92, 236, 194, 0.14)"
   },
   swatch: {
-    width: 64,
-    height: 42,
-    borderRadius: 10,
+    width: 78,
+    height: 56,
+    borderRadius: radii.md,
     overflow: "hidden",
-    padding: 4,
+    padding: 6,
     justifyContent: "space-between"
   },
   swatchBubble: {
-    width: 32,
-    height: 12,
-    borderRadius: 6
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: "flex-start"
   },
   swatchBubbleMine: {
     alignSelf: "flex-end"
   },
-  rowTitle: { color: "#E9EDF1", fontSize: 14, fontWeight: "900" },
+  swatchBubbleText: { fontSize: 9, fontFamily: fontFamilies.displaySemibold, letterSpacing: 0.2 },
+  rowTitle: { color: "#E9EDF1", fontSize: 14, fontFamily: fontFamilies.display, letterSpacing: 0.2 },
   rowHint: { marginTop: 2, color: "rgba(233,237,241,0.62)", fontSize: 11 },
   closeBtn: {
-    marginTop: 14,
+    marginTop: 16,
     alignSelf: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingHorizontal: 22,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: "rgba(193, 215, 246, 0.28)"
   },
-  closeText: { color: "#D9EBFF", fontWeight: "800", fontSize: 12 }
+  closeText: { color: "#D9EBFF", fontFamily: fontFamilies.displaySemibold, fontSize: 12, letterSpacing: 0.3 }
 });

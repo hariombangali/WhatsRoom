@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
+import { radii } from "../theme/radii";
 
 export function TextField({
   value,
@@ -52,7 +53,7 @@ export function TextField({
 const styles = StyleSheet.create({
   wrap: {
     marginTop: 10,
-    borderRadius: 14,
+    borderRadius: radii.lg,
     backgroundColor: "rgba(109, 156, 255, 0.07)",
     borderWidth: 1,
     borderColor: "rgba(199, 220, 255, 0.18)",

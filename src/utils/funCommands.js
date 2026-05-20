@@ -85,16 +85,16 @@ function meAction(text, displayName) {
 }
 
 export const SLASH_HELP_LINES = [
-  "/roll [NdM] — roll dice (default 1d6)",
-  "/flip — flip a coin",
-  "/8ball <question> — ask the magic 8-ball",
-  "/joke — random joke",
-  "/me <action> — describe an action",
-  "/shrug — ¯\\_(ツ)_/¯",
-  "/tableflip — (╯°□°)╯︵ ┻━┻",
-  "/unflip — ┬─┬ノ( º _ ºノ)",
-  "/clap <text> — claps 👏 between 👏 words",
-  "/help — show this list"
+  "🎲  /roll [NdM] — roll dice (default 1d6)",
+  "🪙  /flip — flip a coin",
+  "🎱  /8ball <question> — ask the magic 8-ball",
+  "😄  /joke — random joke",
+  "🎭  /me <action> — describe an action",
+  "🤷  /shrug — ¯\\_(ツ)_/¯",
+  "🙃  /tableflip — (╯°□°)╯︵ ┻━┻",
+  "🙂  /unflip — ┬─┬ノ( º _ ºノ)",
+  "👏  /clap <text> — claps between words",
+  "❓  /help — show this list"
 ];
 
 const CELEBRATORY_EMOJIS = ["🎉", "🥳", "🎊", "🎂", "🎈", "🎆"];

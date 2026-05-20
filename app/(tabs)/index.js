@@ -7,12 +7,27 @@ import { Share } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { createRoom, validateRoom } from "../../src/api/rooms";
 import { colors } from "../../src/theme/colors";
+import { radii } from "../../src/theme/radii";
+import { typography, fontFamilies } from "../../src/theme/typography";
+import { shadow } from "../../src/theme/shadow";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { TextField } from "../../src/components/TextField";
 import { RoomIdCard } from "../../src/components/RoomIdCard";
 import { ConfettiBurst } from "../../src/components/ConfettiBurst";
+import { Mascot } from "../../src/components/Mascot";
+import { ShineBackground } from "../../src/components/ShineBackground";
+import { StickerChip } from "../../src/components/StickerChip";
 import { getDisplayName, getRecentRooms, saveDisplayName, saveRecentRoom } from "../../src/utils/storage";
 import { generateNickname } from "../../src/utils/nicknames";
+
+const HERO_TAGLINES = [
+  "Rooms that feel alive.",
+  "Friends, but make it a room.",
+  "Pop in. Stay a while.",
+  "Where chat goes squishy.",
+  "Your tiny clubhouse, instantly.",
+  "Real-time and a little playful."
+];
 
 export default function HomeScreen() {
   const [joinId, setJoinId] = useState("");
@@ -37,7 +52,8 @@ export default function HomeScreen() {
   }
 
   const joinIdNormalized = useMemo(() => String(joinId || "").trim().toUpperCase(), [joinId]);
-  const quickRooms = useMemo(() => recentRooms.slice(0, 4), [recentRooms]);
+  const quickRooms = useMemo(() => recentRooms.slice(0, 5), [recentRooms]);
+  const heroTagline = useMemo(() => HERO_TAGLINES[Math.floor(Math.random() * HERO_TAGLINES.length)], []);
 
   const loadLocalData = useCallback(async () => {
     const [rooms, name] = await Promise.all([getRecentRooms(), getDisplayName()]);
@@ -137,16 +153,24 @@ export default function HomeScreen() {
   }
 
   return (
-    <LinearGradient colors={["#061120", "#0C1D33", "#091523"]} style={styles.container}>
+    <LinearGradient colors={["#161226", "#1F2230", "#14122B"]} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
-          <View style={styles.heroBadge}>
-            <Ionicons name="diamond-outline" size={13} color="#89FFE4" />
-            <Text style={styles.heroBadgeText}>Premium Rooms</Text>
-          </View>
+          <ShineBackground />
+          <View style={styles.heroContent}>
+            <View style={styles.heroTextCol}>
+              <View style={styles.heroBadge}>
+                <Ionicons name="sparkles-outline" size={13} color="#FFD984" />
+                <Text style={styles.heroBadgeText}>Hello, friend!</Text>
+              </View>
 
-          <Text style={styles.h1}>WhatsRoom</Text>
-          <Text style={styles.h2}>Modern room chat with live sync, persistent history, and one-tap sharing.</Text>
+              <Text style={styles.h1}>WhatsRoom</Text>
+              <Text style={styles.h2}>{heroTagline}</Text>
+            </View>
+            <View style={styles.heroMascot}>
+              <Mascot size={68} mood="happy" />
+            </View>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -268,10 +292,13 @@ export default function HomeScreen() {
 
             <View style={styles.quickGrid}>
               {quickRooms.map((item) => (
-                <Pressable key={item.roomId} style={styles.quickChip} onPress={() => openRecentRoom(item.roomId)}>
-                  <Ionicons name={item.isFavorite ? "star" : "ellipse-outline"} size={12} color="#8AFFF1" />
-                  <Text style={styles.quickChipText}>{item.roomId}</Text>
-                </Pressable>
+                <StickerChip
+                  key={item.roomId}
+                  roomId={item.roomId}
+                  isFavorite={item.isFavorite}
+                  onPress={() => openRecentRoom(item.roomId)}
+                  compact
+                />
               ))}
             </View>
           </View>
@@ -351,83 +378,77 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollBody: { padding: 16, paddingBottom: 26 },
   hero: {
-    borderRadius: 24,
-    padding: 16,
-    backgroundColor: "rgba(14, 34, 58, 0.72)",
+    borderRadius: radii.xl,
+    padding: 20,
+    backgroundColor: "rgba(20, 16, 40, 0.78)",
     borderWidth: 1,
-    borderColor: "rgba(186, 221, 255, 0.18)"
+    borderColor: "rgba(255, 217, 132, 0.20)",
+    overflow: "hidden",
+    ...shadow.pop
   },
+  heroContent: { flexDirection: "row", alignItems: "center", gap: 12 },
+  heroTextCol: { flex: 1 },
+  heroMascot: { width: 76, alignItems: "center", justifyContent: "center" },
   heroBadge: {
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
-    backgroundColor: "rgba(122, 255, 222, 0.15)",
+    borderRadius: radii.pill,
+    backgroundColor: "rgba(255, 217, 132, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(122, 255, 222, 0.40)",
-    paddingHorizontal: 10,
+    borderColor: "rgba(255, 217, 132, 0.45)",
+    paddingHorizontal: 11,
     paddingVertical: 5
   },
-  heroBadgeText: { color: "#BCFFE9", fontWeight: "800", fontSize: 11 },
-  h1: { marginTop: 12, color: colors.text, fontSize: 28, fontWeight: "900", letterSpacing: 0.2 },
-  h2: { marginTop: 6, color: colors.subtext, fontSize: 13, lineHeight: 18 },
+  heroBadgeText: { color: "#FFE8B3", fontFamily: fontFamilies.displaySemibold, fontSize: 11, letterSpacing: 0.3 },
+  h1: { ...typography.displayXL, marginTop: 12, color: "#FFF2DC", fontSize: 30 },
+  h2: { marginTop: 6, color: "rgba(255, 232, 207, 0.78)", fontSize: 13, lineHeight: 18 },
 
   card: {
-    marginTop: 12,
-    backgroundColor: "rgba(11, 26, 45, 0.78)",
-    borderRadius: 18,
-    padding: 14,
+    marginTop: 14,
+    backgroundColor: "rgba(15, 18, 36, 0.80)",
+    borderRadius: radii.xl,
+    padding: 18,
     borderWidth: 1,
-    borderColor: "rgba(194, 218, 249, 0.18)"
+    borderColor: "rgba(217, 183, 255, 0.18)",
+    ...shadow.soft
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
-  cardTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
-  cardSub: { marginTop: 7, color: colors.subtext, fontSize: 12, lineHeight: 16 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardTitle: { ...typography.h2, color: colors.text },
+  cardSub: { marginTop: 7, color: colors.subtext, fontSize: 12, lineHeight: 17 },
   profileButtonRow: { marginTop: 4, flexDirection: "row", gap: 8 },
   profileButtonItem: { flex: 1 },
-  profileHint: { marginTop: 9, color: "rgba(188, 227, 255, 0.72)", fontSize: 11, fontWeight: "700" },
-  buttonMetaRow: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  profileHint: { marginTop: 10, color: "rgba(255, 217, 184, 0.78)", fontSize: 11, fontFamily: fontFamilies.displaySemibold, letterSpacing: 0.3 },
+  buttonMetaRow: { marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" },
   buttonMetaChip: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 6
   },
   buttonMetaMint: {
-    borderColor: "rgba(107, 255, 221, 0.38)",
-    backgroundColor: "rgba(107, 255, 221, 0.12)"
+    borderColor: "rgba(180, 241, 214, 0.45)",
+    backgroundColor: "rgba(180, 241, 214, 0.14)"
   },
   buttonMetaAzure: {
-    borderColor: "rgba(147, 194, 255, 0.38)",
-    backgroundColor: "rgba(147, 194, 255, 0.12)"
+    borderColor: "rgba(185, 219, 255, 0.45)",
+    backgroundColor: "rgba(185, 219, 255, 0.14)"
   },
-  buttonMetaText: { color: "#D9ECFF", fontSize: 11, fontWeight: "900", letterSpacing: 0.2 },
+  buttonMetaText: { color: "#F1ECFF", fontFamily: fontFamilies.displaySemibold, fontSize: 11, letterSpacing: 0.3 },
 
-  quickGrid: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  quickChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "rgba(146, 246, 222, 0.32)",
-    backgroundColor: "rgba(61, 213, 180, 0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 7
-  },
-  quickChipText: { color: "#CBFFF2", fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
+  quickGrid: { marginTop: 12, flexDirection: "row", gap: 8, flexWrap: "wrap" },
 
   errorBox: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: "rgba(255, 69, 58, 0.12)",
+    marginTop: 12,
+    padding: 14,
+    borderRadius: radii.md,
+    backgroundColor: "rgba(255, 105, 97, 0.14)",
     borderWidth: 1,
-    borderColor: "rgba(255, 69, 58, 0.25)",
+    borderColor: "rgba(255, 105, 97, 0.32)",
     flexDirection: "row",
     alignItems: "center",
     gap: 7
@@ -442,22 +463,22 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: "#0B1626",
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: radii.xl,
+    padding: 18,
     borderWidth: 1,
     borderColor: "rgba(188, 220, 255, 0.18)"
   },
   modalHeader: { flexDirection: "row", gap: 10, alignItems: "center" },
   modalIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: radii.md,
     backgroundColor: "#67F4D2",
     justifyContent: "center",
     alignItems: "center"
   },
-  modalTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
-  modalSub: { marginTop: 3, color: colors.subtext, fontSize: 12 },
+  modalTitle: { ...typography.h2, color: colors.text, fontSize: 18 },
+  modalSub: { marginTop: 4, color: colors.subtext, fontSize: 12, lineHeight: 17 },
   modalActions: { marginTop: 12, gap: 4 },
   modalBusy: { marginTop: 10 }
 });

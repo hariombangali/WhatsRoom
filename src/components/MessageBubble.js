@@ -1,9 +1,23 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
+import { radii } from "../theme/radii";
+import { fontFamilies } from "../theme/typography";
 import { getChatTheme } from "../utils/themes";
 import { parseFormattedSegments } from "../utils/textFormat";
+
+const EMOJI_ONLY_FONT_SIZE = 38;
+const EMOJI_ONLY_MAX_GLYPHS = 6;
+
+function isEmojiOnly(text) {
+  const value = String(text || "").trim();
+  if (!value) return false;
+  if (/[A-Za-z0-9]/.test(value)) return false;
+  const codepoints = Array.from(value.replace(/\s/g, ""));
+  if (codepoints.length === 0 || codepoints.length > EMOJI_ONLY_MAX_GLYPHS) return false;
+  return codepoints.every((cp) => cp.codePointAt(0) > 127);
+}
 
 function getStatusMeta(status, mineTextColor) {
   if (status === "failed") {
@@ -131,6 +145,45 @@ export function MessageBubble({ mine, message, time, status, senderLabel, replyT
   const replyAuthor =
     replyTo?.senderName || (replyTo?.senderId && replyTo.senderId === senderId ? "You" : replyTo?.senderId || "User");
 
+  const emojiOnly = !hasReply && isEmojiOnly(message);
+
+  if (emojiOnly) {
+    return (
+      <View style={[styles.row, { justifyContent: mine ? "flex-end" : "flex-start" }]}>
+        <View style={styles.emojiOnlyWrap}>
+          {!mine && (
+            <View style={styles.senderRow}>
+              <Ionicons name="person-circle-outline" size={13} color="rgba(233,237,241,0.58)" />
+              <Text style={styles.sender}>{senderLabel}</Text>
+            </View>
+          )}
+          <Text style={styles.emojiOnlyText}>{String(message).trim()}</Text>
+          <View style={styles.metaRow}>
+            <Text style={styles.time}>{time}</Text>
+            {mine && (
+              <View style={styles.statusWrap}>
+                <Ionicons name={meta.icon} size={13} color={meta.iconColor} />
+              </View>
+            )}
+          </View>
+          {reactionList.length > 0 && (
+            <View style={styles.reactionRow}>
+              {reactionList.map((entry) => {
+                const reacted = entry.users.includes(String(senderId || "").trim());
+                return (
+                  <View key={entry.emoji} style={[styles.reactionChip, reacted && styles.reactionChipActive]}>
+                    <Text style={styles.reactionEmoji}>{entry.emoji}</Text>
+                    <Text style={[styles.reactionCount, reacted && styles.reactionCountActive]}>{entry.count}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.row, { justifyContent: mine ? "flex-end" : "flex-start" }]}>
       <View style={[styles.bubble, mine ? styles.mineRadius : styles.theirsRadius, bubbleStyle]}>
@@ -182,20 +235,37 @@ const styles = StyleSheet.create({
   row: { marginBottom: 10, flexDirection: "row" },
   bubble: {
     maxWidth: "88%",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: radii.lg,
     borderWidth: 1,
     shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2
+    shadowOpacity: 0.20,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3
   },
-  mineRadius: { borderTopRightRadius: 6 },
-  theirsRadius: { borderTopLeftRadius: 6 },
+  mineRadius: { borderTopRightRadius: radii.xs },
+  theirsRadius: { borderTopLeftRadius: radii.xs },
+
+  emojiOnlyWrap: {
+    maxWidth: "88%",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    alignItems: "flex-start"
+  },
+  emojiOnlyText: {
+    fontSize: EMOJI_ONLY_FONT_SIZE,
+    lineHeight: EMOJI_ONLY_FONT_SIZE * 1.18,
+    letterSpacing: 1
+  },
   senderRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 },
-  sender: { color: "rgba(233,237,241,0.65)", fontSize: 11, fontWeight: "800" },
+  sender: {
+    color: "rgba(233,237,241,0.72)",
+    fontSize: 11,
+    fontFamily: fontFamilies.displaySemibold,
+    letterSpacing: 0.3
+  },
   replyBox: {
     borderRadius: 10,
     borderWidth: 1,

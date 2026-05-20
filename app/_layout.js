@@ -3,21 +3,33 @@ import { Stack } from "expo-router";
 import { useEffect } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useFonts, Quicksand_600SemiBold, Quicksand_700Bold } from "@expo-google-fonts/quicksand";
 import { initNotifications } from "../src/utils/notifications";
+import { fontFamilies } from "../src/theme/typography";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    [fontFamilies.display]: Quicksand_700Bold,
+    [fontFamilies.displaySemibold]: Quicksand_600SemiBold
+  });
+
   useEffect(() => {
     initNotifications().catch(() => {});
+  }, []);
 
-    // Keep native splash until first screen renders.
+  useEffect(() => {
+    if (!fontsLoaded) return;
+
     const t = setTimeout(() => {
       SplashScreen.hideAsync().catch(() => {});
-    }, 300);
+    }, 200);
 
     return () => clearTimeout(t);
-  }, []);
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <>
@@ -25,7 +37,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: { backgroundColor: "#0B141A" },
-          headerTitleStyle: { color: "#E9EDF1", fontWeight: "700" },
+          headerTitleStyle: { color: "#E9EDF1", fontFamily: fontFamilies.display },
           headerTintColor: "#E9EDF1",
           contentStyle: { backgroundColor: "#0B141A" }
         }}

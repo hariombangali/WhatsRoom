@@ -1,6 +1,16 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming
+} from "react-native-reanimated";
+import { radii } from "../theme/radii";
+import { fontFamilies } from "../theme/typography";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const TONE_MAP = {
   mint: {
@@ -47,16 +57,26 @@ export function PrimaryButton({
   const iconColor = isSecondary ? "#DCEBFF" : palette.icon;
   const textColor = isSecondary ? "#EAF3FF" : palette.text;
   const iconSize = isCompact ? 15 : 16;
+  const scale = useSharedValue(1);
+  const animatedPressableStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }]
+  }));
 
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
+      onPressIn={() => {
+        if (!disabled) scale.value = withTiming(0.965, { duration: 90 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 12, stiffness: 220, mass: 0.6 });
+      }}
+      style={[
         styles.pressable,
         isCompact ? styles.compactPressable : styles.defaultPressable,
         disabled && { opacity: 0.45 },
-        pressed && !disabled && styles.pressed
+        animatedPressableStyle
       ]}
       android_ripple={{ color: "rgba(255,255,255,0.16)", borderless: false }}
     >
@@ -106,31 +126,31 @@ export function PrimaryButton({
           </View>
         </LinearGradient>
       </View>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   pressable: {
     marginTop: 12,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     overflow: "hidden"
   },
-  defaultPressable: { minHeight: 50 },
-  compactPressable: { minHeight: 40, marginTop: 8 },
+  defaultPressable: { minHeight: 52 },
+  compactPressable: { minHeight: 42, marginTop: 8 },
   layer: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: radii.lg,
     borderWidth: 1,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 9,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 5
   },
-  defaultLayer: { minHeight: 50 },
-  compactLayer: { minHeight: 40, borderRadius: 14 },
+  defaultLayer: { minHeight: 52 },
+  compactLayer: { minHeight: 42, borderRadius: radii.md },
   primaryLayer: { borderColor: "rgba(125, 248, 226, 0.30)" },
   secondaryLayer: {
     borderColor: "rgba(169, 204, 249, 0.26)",
@@ -204,15 +224,14 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   text: {
-    fontSize: 14.5,
-    fontWeight: "900",
+    fontSize: 15,
+    fontFamily: fontFamilies.display,
     letterSpacing: 0.35,
     textShadowColor: "rgba(255,255,255,0.20)",
     textShadowRadius: 3
   },
   compactText: {
-    fontSize: 13.25,
+    fontSize: 13.5,
     letterSpacing: 0.25
-  },
-  pressed: { transform: [{ scale: 0.985 }], opacity: 0.97 }
+  }
 });

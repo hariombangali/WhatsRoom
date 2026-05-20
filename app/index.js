@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { View, Text, StyleSheet, Dimensions, Image } from "react-native";
+import { View, Text, StyleSheet, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Animated, {
   Easing,
@@ -11,6 +11,8 @@ import Animated, {
   withTiming
 } from "react-native-reanimated";
 import { router } from "expo-router";
+import { Mascot } from "../src/components/Mascot";
+import { typography, fontFamilies } from "../src/theme/typography";
 
 const { width, height } = Dimensions.get("window");
 
@@ -86,7 +88,7 @@ export default function SplashRoute() {
   const title = useMemo(() => "WhatsRoom", []);
 
   return (
-    <LinearGradient colors={["#050F1E", "#0B1E35", "#07152A"]} style={styles.container}>
+    <LinearGradient colors={["#0E1024", "#1F2230", "#14192E"]} style={styles.container}>
       <Animated.View style={[styles.bgBlob, styles.bgBlobA, blobAStyle]} />
       <Animated.View style={[styles.bgBlob, styles.bgBlobB, blobBStyle]} />
 
@@ -94,7 +96,7 @@ export default function SplashRoute() {
         <Animated.View style={[styles.orbitRing, ringStyle]} />
 
         <Animated.View style={[styles.logoShell, shellStyle]}>
-          <Image source={require("../assets/brand/logo-mark.png")} style={styles.logoImage} resizeMode="contain" />
+          <Mascot size={120} mood="excited" />
         </Animated.View>
 
         <Animated.View style={titleStyle}>
@@ -107,7 +109,7 @@ export default function SplashRoute() {
         </View>
       </View>
 
-      <Text style={styles.footer}>Realtime chat | custom reactions | read receipts</Text>
+      <Text style={styles.footer}>Realtime chat | playful reactions | read receipts</Text>
     </LinearGradient>
   );
 }
@@ -129,74 +131,69 @@ const styles = StyleSheet.create({
     height: width * 0.72,
     left: -width * 0.26,
     top: -width * 0.24,
-    backgroundColor: "rgba(111, 244, 255, 0.22)"
+    backgroundColor: "rgba(255, 179, 156, 0.28)"
   },
   bgBlobB: {
     width: width * 0.66,
     height: width * 0.66,
     right: -width * 0.16,
     bottom: height * 0.04,
-    backgroundColor: "rgba(116, 245, 198, 0.20)"
+    backgroundColor: "rgba(180, 241, 214, 0.24)"
   },
   orbitRing: {
     position: "absolute",
-    width: 208,
-    height: 208,
+    width: 220,
+    height: 220,
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: "rgba(118, 255, 220, 0.33)",
+    borderColor: "rgba(255, 217, 132, 0.42)",
     borderStyle: "dashed"
   },
   logoShell: {
-    width: 154,
-    height: 154,
-    borderRadius: 34,
+    width: 168,
+    height: 168,
+    borderRadius: 84,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 28, 48, 0.72)",
+    backgroundColor: "rgba(35, 28, 56, 0.55)",
     borderWidth: 1,
-    borderColor: "rgba(172, 210, 255, 0.24)",
+    borderColor: "rgba(217, 183, 255, 0.35)",
     shadowColor: "#000",
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.32,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 12 },
     elevation: 9
   },
-  logoImage: {
-    width: 130,
-    height: 130
-  },
   title: {
-    marginTop: 18,
-    color: "#ECF6FF",
-    fontSize: 30,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-    textAlign: "center"
+    ...typography.displayXL,
+    marginTop: 22,
+    color: "#FFF2DC",
+    textAlign: "center",
+    fontFamily: fontFamilies.display
   },
   subtitle: {
     marginTop: 6,
-    color: "rgba(224, 239, 255, 0.72)",
+    color: "rgba(255, 236, 211, 0.78)",
     fontSize: 14,
     textAlign: "center"
   },
   progressTrack: {
-    marginTop: 24,
+    marginTop: 26,
     width: "86%",
     height: 10,
     borderRadius: 999,
     overflow: "hidden",
-    backgroundColor: "rgba(170, 204, 248, 0.16)"
+    backgroundColor: "rgba(255, 217, 132, 0.16)"
   },
   progressFill: {
     height: 10,
     borderRadius: 999,
-    backgroundColor: "#58F2C8"
+    backgroundColor: "#FFD984"
   },
   footer: {
     textAlign: "center",
     paddingBottom: 22,
-    color: "rgba(223, 237, 255, 0.50)",
+    color: "rgba(255, 236, 211, 0.55)",
     fontSize: 11,
     letterSpacing: 0.2
   }

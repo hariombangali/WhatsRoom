@@ -1,44 +1,74 @@
+import { View, StyleSheet } from "react-native";
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../src/theme/colors";
+import { fontFamilies } from "../../src/theme/typography";
+import { BouncyIcon } from "../../src/components/BouncyIcon";
+
+function TabIcon({ name, color, focused }) {
+  return (
+    <View style={styles.iconWrap}>
+      <BouncyIcon name={name} size={22} color={color} triggerKey={focused ? "on" : "off"} />
+      <View style={[styles.dot, focused && styles.dotActive]} />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#08121F" },
+        headerStyle: { backgroundColor: "#161226" },
         headerShadowVisible: false,
-        headerTitleStyle: { color: colors.text, fontWeight: "900", letterSpacing: 0.2 },
+        headerTitleStyle: {
+          color: colors.text,
+          fontFamily: fontFamilies.display,
+          letterSpacing: 0.3
+        },
         headerTintColor: colors.text,
         tabBarStyle: {
-          height: 64,
+          height: 70,
           paddingTop: 8,
-          paddingBottom: 10,
-          backgroundColor: "rgba(8, 17, 30, 0.98)",
-          borderTopColor: "rgba(192, 214, 243, 0.16)"
+          paddingBottom: 12,
+          backgroundColor: "rgba(20, 16, 40, 0.98)",
+          borderTopColor: "rgba(217, 183, 255, 0.22)"
         },
         tabBarLabelStyle: {
-          fontWeight: "800",
-          fontSize: 11
+          fontFamily: fontFamilies.displaySemibold,
+          fontSize: 11,
+          letterSpacing: 0.3
         },
-        tabBarActiveTintColor: "#37E8B7",
-        tabBarInactiveTintColor: "rgba(233,237,241,0.55)"
+        tabBarActiveTintColor: "#FFD984",
+        tabBarInactiveTintColor: "rgba(241, 236, 255, 0.55)"
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => <Ionicons name="sparkles-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => <TabIcon name="sparkles" color={color} focused={focused} />
         }}
       />
       <Tabs.Screen
         name="rooms"
         options={{
           title: "Rooms",
-          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" size={size} color={color} />
+          tabBarIcon: ({ color, focused }) => <TabIcon name="albums" color={color} focused={focused} />
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrap: { alignItems: "center", justifyContent: "center", width: 30 },
+  dot: {
+    marginTop: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 99,
+    backgroundColor: "transparent"
+  },
+  dotActive: {
+    backgroundColor: "#FFD984"
+  }
+});

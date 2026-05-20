@@ -13,6 +13,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import { colors } from "../../src/theme/colors";
+import { radii } from "../../src/theme/radii";
+import { typography, fontFamilies } from "../../src/theme/typography";
+import { shadow } from "../../src/theme/shadow";
 import {
   clearRecentRooms,
   getRecentRooms,
@@ -23,6 +26,7 @@ import {
 import { EmptyState } from "../../src/components/EmptyState";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { TextField } from "../../src/components/TextField";
+import { getStickerStyle } from "../../src/components/StickerChip";
 import { formatRelativeTime } from "../../src/utils/time";
 import { playClearTone, playDeleteTone, primeActionTone, unloadActionTone } from "../../src/utils/sound";
 import { getRoomMessages } from "../../src/api/rooms";
@@ -192,7 +196,7 @@ export default function RoomsScreen() {
   }
 
   return (
-    <LinearGradient colors={["#061120", "#0C1C30", "#081523"]} style={styles.container}>
+    <LinearGradient colors={["#161226", "#1F2230", "#14122B"]} style={styles.container}>
       <ScrollView
         contentContainerStyle={styles.body}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#31D0AA" />}
@@ -220,74 +224,81 @@ export default function RoomsScreen() {
             title={rooms.length === 0 ? "No rooms yet" : "No result"}
             subtitle={
               rooms.length === 0
-                ? "Create or join a room from Home. Recent rooms will appear here."
+                ? "Create or join a room from Home — your sticker pile shows up here."
                 : "Try a different room ID or clear search."
             }
             icon={rooms.length === 0 ? "albums-outline" : "search-outline"}
+            mascotMood={rooms.length === 0 ? "sleepy" : undefined}
           />
         ) : (
           <View style={styles.list}>
-            {filteredRooms.map((item) => (
-              <Pressable key={item.roomId} style={styles.roomRow} onPress={() => openRoom(item.roomId)}>
-                {!!unreadByRoom[item.roomId] && (
-                  <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadBadgeText}>
-                      {unreadByRoom[item.roomId] > 99 ? "99+" : unreadByRoom[item.roomId]}
-                    </Text>
+            {filteredRooms.map((item) => {
+              const sticker = getStickerStyle(item.roomId);
+              return (
+                <Pressable
+                  key={item.roomId}
+                  style={[
+                    styles.roomRow,
+                    { borderColor: sticker.palette.border, backgroundColor: "rgba(15, 18, 36, 0.86)" }
+                  ]}
+                  onPress={() => openRoom(item.roomId)}
+                >
+                  {!!unreadByRoom[item.roomId] && (
+                    <View style={styles.unreadBadge}>
+                      <Text style={styles.unreadBadgeText}>
+                        {unreadByRoom[item.roomId] > 99 ? "99+" : unreadByRoom[item.roomId]}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View style={[styles.stickerAvatar, { backgroundColor: sticker.palette.bg, borderColor: sticker.palette.border }]}>
+                    <Text style={styles.stickerAvatarEmoji}>{item.isFavorite ? "⭐" : sticker.emoji}</Text>
                   </View>
-                )}
 
-                <View style={[styles.badge, item.isFavorite && styles.badgeFavorite]}>
-                  <Ionicons
-                    name={item.isFavorite ? "star" : "key-outline"}
-                    size={13}
-                    color={item.isFavorite ? "#FFD88F" : "#7CFFDD"}
-                  />
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.roomId}>{item.roomId}</Text>
+                    <Text style={styles.roomHint}>Last active {formatRelativeTime(item.lastOpenedAt)}</Text>
+                  </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.roomId}>{item.roomId}</Text>
-                  <Text style={styles.roomHint}>Last active {formatRelativeTime(item.lastOpenedAt)}</Text>
-                </View>
+                  <View style={styles.actions}>
+                    <Pressable
+                      style={styles.actionBtn}
+                      onPress={async (e) => {
+                        e.stopPropagation();
+                        await toggleRecentRoomFavorite(item.roomId);
+                        await load();
+                      }}
+                    >
+                      <Ionicons
+                        name={item.isFavorite ? "star" : "star-outline"}
+                        size={16}
+                        color={item.isFavorite ? "#FFD88F" : "#CCE0FF"}
+                      />
+                    </Pressable>
 
-                <View style={styles.actions}>
-                  <Pressable
-                    style={styles.actionBtn}
-                    onPress={async (e) => {
-                      e.stopPropagation();
-                      await toggleRecentRoomFavorite(item.roomId);
-                      await load();
-                    }}
-                  >
-                    <Ionicons
-                      name={item.isFavorite ? "star" : "star-outline"}
-                      size={16}
-                      color={item.isFavorite ? "#FFD88F" : "#CCE0FF"}
-                    />
-                  </Pressable>
+                    <Pressable
+                      style={styles.actionBtn}
+                      onPress={async (e) => {
+                        e.stopPropagation();
+                        await copyRoomId(item.roomId);
+                      }}
+                    >
+                      <Ionicons name="copy-outline" size={16} color="#CCE0FF" />
+                    </Pressable>
 
-                  <Pressable
-                    style={styles.actionBtn}
-                    onPress={async (e) => {
-                      e.stopPropagation();
-                      await copyRoomId(item.roomId);
-                    }}
-                  >
-                    <Ionicons name="copy-outline" size={16} color="#CCE0FF" />
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.actionBtn}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      askRemoveRoom(item.roomId);
-                    }}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#FFB4AE" />
-                  </Pressable>
-                </View>
-              </Pressable>
-            ))}
+                    <Pressable
+                      style={styles.actionBtn}
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        askRemoveRoom(item.roomId);
+                      }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#FFB4AE" />
+                    </Pressable>
+                  </View>
+                </Pressable>
+              );
+            })}
           </View>
         )}
 
@@ -318,85 +329,85 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   body: { padding: 16, paddingBottom: 26 },
   header: {
-    borderRadius: 22,
-    padding: 15,
-    backgroundColor: "rgba(13, 31, 52, 0.74)",
+    borderRadius: radii.xl,
+    padding: 18,
+    backgroundColor: "rgba(20, 16, 40, 0.80)",
     borderWidth: 1,
-    borderColor: "rgba(188, 218, 255, 0.16)"
+    borderColor: "rgba(217, 183, 255, 0.22)",
+    ...shadow.soft
   },
   headerBadge: {
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(124, 255, 221, 0.35)",
-    backgroundColor: "rgba(124, 255, 221, 0.12)",
-    paddingHorizontal: 10,
+    borderColor: "rgba(255, 217, 132, 0.40)",
+    backgroundColor: "rgba(255, 217, 132, 0.14)",
+    paddingHorizontal: 11,
     paddingVertical: 5
   },
-  headerBadgeText: { color: "#C6FFF0", fontSize: 11, fontWeight: "900" },
-  title: { marginTop: 10, color: colors.text, fontSize: 23, fontWeight: "900" },
-  sub: { marginTop: 6, color: colors.subtext, fontSize: 12, lineHeight: 16 },
+  headerBadgeText: { color: "#FFE8B3", fontSize: 11, fontFamily: fontFamilies.displaySemibold, letterSpacing: 0.3 },
+  title: { ...typography.display, marginTop: 12, color: "#FFF2DC" },
+  sub: { marginTop: 6, color: colors.subtext, fontSize: 12, lineHeight: 17 },
 
-  list: { marginTop: 12, gap: 10 },
+  list: { marginTop: 14, gap: 12 },
   roomRow: {
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderRadius: 16,
-    backgroundColor: "rgba(11, 26, 45, 0.76)",
-    borderWidth: 1,
-    borderColor: "rgba(192, 216, 250, 0.18)"
+    gap: 12,
+    padding: 14,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    ...shadow.soft
   },
   unreadBadge: {
     position: "absolute",
-    top: -7,
-    right: -7,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -8,
+    right: -8,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: "#FF5F7A",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.28)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.36)",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
-    zIndex: 5
+    zIndex: 5,
+    shadowColor: "#FF5F7A",
+    shadowOpacity: 0.42,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4
   },
   unreadBadgeText: {
     color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "900",
+    fontSize: 11,
+    fontFamily: fontFamilies.display,
     letterSpacing: 0.2
   },
-  badge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "rgba(30, 215, 96, 0.15)",
+  stickerAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: radii.md,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(30, 215, 96, 0.25)"
+    borderWidth: 1.5
   },
-  badgeFavorite: {
-    backgroundColor: "rgba(255, 204, 102, 0.12)",
-    borderColor: "rgba(255, 216, 143, 0.40)"
-  },
-  roomId: { color: colors.text, fontWeight: "900", fontSize: 14, letterSpacing: 0.5 },
+  stickerAvatarEmoji: { fontSize: 20 },
+  roomId: { color: colors.text, fontFamily: fontFamilies.display, fontSize: 15, letterSpacing: 1 },
   roomHint: { marginTop: 2, color: colors.subtext, fontSize: 11 },
   actions: { flexDirection: "row", gap: 6 },
   actionBtn: {
-    height: 30,
-    width: 30,
-    borderRadius: 10,
+    height: 32,
+    width: 32,
+    borderRadius: radii.sm,
     borderWidth: 1,
-    borderColor: "rgba(189, 212, 240, 0.22)",
-    backgroundColor: "rgba(171, 199, 236, 0.08)",
+    borderColor: "rgba(189, 212, 240, 0.24)",
+    backgroundColor: "rgba(171, 199, 236, 0.10)",
     alignItems: "center",
     justifyContent: "center"
   }

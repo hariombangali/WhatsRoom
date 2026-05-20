@@ -18,9 +18,19 @@ import { useHeaderHeight } from "@react-navigation/elements";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown, Layout } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  FadeInDown,
+  Layout,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withTiming
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors } from "../../src/theme/colors";
+import { radii } from "../../src/theme/radii";
+import { fontFamilies } from "../../src/theme/typography";
 import { MessageBubble } from "../../src/components/MessageBubble";
 import { TypingIndicator } from "../../src/components/TypingIndicator";
 import { OnlinePill } from "../../src/components/OnlinePill";
@@ -240,6 +250,18 @@ export default function ChatScreen() {
     setConfettiOn(false);
     requestAnimationFrame(() => setConfettiOn(true));
   }, []);
+
+  const sendRotate = useSharedValue(0);
+  const sendButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${sendRotate.value}deg` }]
+  }));
+
+  function playSendRotate() {
+    sendRotate.value = withSequence(
+      withTiming(360, { duration: 420, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 0 })
+    );
+  }
 
   async function applyTheme(nextThemeId) {
     setThemeId(nextThemeId);
@@ -636,6 +658,8 @@ export default function ChatScreen() {
       triggerConfetti();
     }
 
+    playSendRotate();
+
     try {
       await sendMessage({ message: text, clientMessageId, replyToMessageId: replyTo?.messageId || null });
       playSendTone().catch(() => {});
@@ -929,7 +953,9 @@ export default function ChatScreen() {
                   disabled={!canSend}
                   style={[styles.sendBtn, { opacity: canSend ? 1 : 0.35 }]}
                 >
-                  <Ionicons name="paper-plane" size={17} color="#052B20" />
+                  <Animated.View style={sendButtonStyle}>
+                    <Ionicons name="paper-plane" size={18} color="#052B20" />
+                  </Animated.View>
                 </Pressable>
               </View>
 
@@ -950,7 +976,11 @@ export default function ChatScreen() {
         </KeyboardAvoidingView>
       )}
 
-      <ConfettiBurst visible={confettiOn} onDone={() => setConfettiOn(false)} />
+      <ConfettiBurst
+        visible={confettiOn}
+        onDone={() => setConfettiOn(false)}
+        palette={[chatTheme.accent, chatTheme.mineBubble, "#FFB39C", "#FFD984", "#D9B7FF", "#B4F1D6"]}
+      />
 
       <ThemePicker
         visible={themePickerOpen}
@@ -966,70 +996,70 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   chatBody: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: 16 },
-  loadingTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
+  loadingTitle: { color: colors.text, fontFamily: fontFamilies.display, fontSize: 16 },
   loadingSub: { marginTop: 6, color: colors.subtext, fontSize: 12, textAlign: "center" },
 
-  errTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
-  errSub: { marginTop: 6, color: colors.subtext, fontSize: 12, textAlign: "center", lineHeight: 16 },
+  errTitle: { color: colors.text, fontFamily: fontFamilies.display, fontSize: 16 },
+  errSub: { marginTop: 6, color: colors.subtext, fontSize: 12, textAlign: "center", lineHeight: 17 },
 
   retryBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderRadius: radii.pill,
     backgroundColor: "#1ED760"
   },
-  retryText: { color: "#0B141A", fontWeight: "900" },
+  retryText: { color: "#0B141A", fontFamily: fontFamilies.display, letterSpacing: 0.3 },
 
   topMeta: {
     marginHorizontal: 12,
     marginTop: 10,
     marginBottom: 6,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "rgba(186, 216, 255, 0.20)",
-    backgroundColor: "rgba(14, 31, 52, 0.70)"
+    borderColor: "rgba(186, 216, 255, 0.22)",
+    backgroundColor: "rgba(14, 31, 52, 0.72)"
   },
   topRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   roomBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(137, 255, 228, 0.36)",
-    backgroundColor: "rgba(68, 245, 207, 0.15)",
-    paddingHorizontal: 10,
+    borderColor: "rgba(137, 255, 228, 0.42)",
+    backgroundColor: "rgba(68, 245, 207, 0.16)",
+    paddingHorizontal: 11,
     paddingVertical: 5
   },
-  roomBadgeText: { color: "#B8FFF1", fontSize: 11, fontWeight: "900", letterSpacing: 0.4 },
+  roomBadgeText: { color: "#B8FFF1", fontSize: 11, fontFamily: fontFamilies.display, letterSpacing: 0.6 },
   profileBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(198, 217, 245, 0.30)",
+    borderColor: "rgba(198, 217, 245, 0.32)",
     backgroundColor: "rgba(172, 196, 228, 0.15)",
-    paddingHorizontal: 10,
+    paddingHorizontal: 11,
     paddingVertical: 5
   },
-  profileBadgeText: { color: "#D2E4FF", fontSize: 11, fontWeight: "800" },
-  actionsRow: { marginTop: 8, flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  profileBadgeText: { color: "#D2E4FF", fontSize: 11, fontFamily: fontFamilies.displaySemibold },
+  actionsRow: { marginTop: 9, flexDirection: "row", gap: 8, flexWrap: "wrap" },
   metaAction: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: "rgba(188, 211, 239, 0.28)",
+    borderColor: "rgba(188, 211, 239, 0.30)",
     backgroundColor: "rgba(177, 202, 231, 0.10)",
-    paddingHorizontal: 9,
-    paddingVertical: 5
+    paddingHorizontal: 11,
+    paddingVertical: 6
   },
-  metaActionText: { color: "#D2E3FF", fontSize: 11, fontWeight: "800" },
+  metaActionText: { color: "#D2E3FF", fontSize: 11, fontFamily: fontFamilies.displaySemibold },
 
   listContent: { paddingHorizontal: 12, paddingTop: 4 },
 
@@ -1037,12 +1067,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 14,
     bottom: 138,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     backgroundColor: "#52F1C7",
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: "rgba(88, 255, 211, 0.54)"
@@ -1126,16 +1156,16 @@ const styles = StyleSheet.create({
   },
   inputCapsule: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 50,
     maxHeight: 126,
-    borderRadius: 18,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "rgba(186, 216, 255, 0.24)",
+    borderColor: "rgba(217, 183, 255, 0.30)",
     backgroundColor: "rgba(23, 47, 76, 0.94)",
     flexDirection: "row",
     alignItems: "flex-end",
-    paddingLeft: 8,
-    paddingRight: 10,
+    paddingLeft: 10,
+    paddingRight: 12,
     paddingVertical: 5
   },
   inputIconWrap: {
@@ -1162,19 +1192,19 @@ const styles = StyleSheet.create({
     gap: 10
   },
   sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 50,
+    height: 50,
+    borderRadius: radii.lg,
     backgroundColor: "#58F2C8",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(105, 255, 216, 0.72)",
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3
+    borderWidth: 1.5,
+    borderColor: "rgba(105, 255, 216, 0.85)",
+    shadowColor: "#58F2C8",
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6
   },
   countText: {
     color: "rgba(201, 223, 252, 0.52)",
@@ -1194,57 +1224,57 @@ const styles = StyleSheet.create({
   },
   systemMessageBubble: {
     maxWidth: "92%",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "rgba(124, 255, 221, 0.30)",
-    backgroundColor: "rgba(31, 74, 64, 0.55)"
+    borderColor: "rgba(217, 183, 255, 0.35)",
+    backgroundColor: "rgba(46, 36, 78, 0.72)"
   },
   systemMessageHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 4
+    marginBottom: 5
   },
   systemMessageHeaderText: {
     flex: 1,
-    color: "#A5FFE4",
+    color: "#E2CFFF",
     fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.4
+    fontFamily: fontFamilies.display,
+    letterSpacing: 0.5
   },
   systemMessageText: {
-    color: "#DAFFF1",
-    fontSize: 12,
-    lineHeight: 17
+    color: "#F3EAFF",
+    fontSize: 12.5,
+    lineHeight: 18
   },
 
   slashHelper: {
     marginHorizontal: 12,
-    marginBottom: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    marginBottom: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: "rgba(124, 255, 221, 0.30)",
-    backgroundColor: "rgba(11, 38, 38, 0.85)"
+    borderColor: "rgba(180, 241, 214, 0.42)",
+    backgroundColor: "rgba(36, 62, 56, 0.92)"
   },
   slashHelperHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 6
+    marginBottom: 8
   },
   slashHelperTitle: {
-    color: "#A5FFE4",
-    fontSize: 11,
-    fontWeight: "900",
+    color: "#B4F1D6",
+    fontSize: 12,
+    fontFamily: fontFamilies.display,
     letterSpacing: 0.4
   },
   slashHelperLine: {
-    color: "rgba(218, 255, 241, 0.92)",
-    fontSize: 11,
-    lineHeight: 16
+    color: "rgba(232, 255, 241, 0.94)",
+    fontSize: 11.5,
+    lineHeight: 18
   }
 });
