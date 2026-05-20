@@ -24,16 +24,26 @@ import { colors } from "../../src/theme/colors";
 import { MessageBubble } from "../../src/components/MessageBubble";
 import { TypingIndicator } from "../../src/components/TypingIndicator";
 import { OnlinePill } from "../../src/components/OnlinePill";
+import { ConfettiBurst } from "../../src/components/ConfettiBurst";
+import { ThemePicker } from "../../src/components/ThemePicker";
 import { getRoomMessages, validateRoom } from "../../src/api/rooms";
 import { useSenderId } from "../../src/hooks/useSenderId";
 import { useSocket } from "../../src/hooks/useSocket";
 import { formatTime } from "../../src/utils/time";
-import { getDisplayName, saveRecentRoom } from "../../src/utils/storage";
+import {
+  getChatThemeId,
+  getDisplayName,
+  saveChatThemeId,
+  saveRecentRoom
+} from "../../src/utils/storage";
 import { playSendTone, primeSendTone, unloadSendTone } from "../../src/utils/sound";
+import { ensureNotificationPermission, notifyIncomingMessage } from "../../src/utils/notifications";
+import { containsCelebration, parseSlashCommand, SLASH_HELP_LINES } from "../../src/utils/funCommands";
+import { getChatTheme } from "../../src/utils/themes";
 
 const MESSAGE_MAX_LENGTH = 2000;
 const COMPOSER_SAFE_HEIGHT = 136;
-const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥"];
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "🔥", "👏", "😮"];
 
 function normalizeSeenBy(raw) {
   if (!Array.isArray(raw)) return [];
@@ -144,12 +154,20 @@ export default function ChatScreen() {
   const [chatLayoutHeight, setChatLayoutHeight] = useState(0);
   const [activeMessageKey, setActiveMessageKey] = useState(null);
   const [replyTo, setReplyTo] = useState(null);
+  const [themeId, setThemeId] = useState("default");
+  const [themePickerOpen, setThemePickerOpen] = useState(false);
+  const [confettiOn, setConfettiOn] = useState(false);
+  const [localSystemMessages, setLocalSystemMessages] = useState([]);
+  const [slashHelperOpen, setSlashHelperOpen] = useState(false);
+
+  const chatTheme = useMemo(() => getChatTheme(themeId), [themeId]);
 
   const listRef = useRef(null);
   const typingTimerRef = useRef(null);
   const nearBottomRef = useRef(true);
   const seenInFlightRef = useRef(false);
   const baseLayoutHeightRef = useRef(0);
+  const appStateRef = useRef(AppState.currentState || "active");
 
   const canSend = useMemo(() => {
     const text = String(input || "").trim();
@@ -207,7 +225,43 @@ export default function ChatScreen() {
   }, [roomId]);
 
   useEffect(() => {
+    let mounted = true;
+    getChatThemeId()
+      .then((id) => {
+        if (mounted && id) setThemeId(id);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const triggerConfetti = useCallback(() => {
+    setConfettiOn(false);
+    requestAnimationFrame(() => setConfettiOn(true));
+  }, []);
+
+  async function applyTheme(nextThemeId) {
+    setThemeId(nextThemeId);
+    setThemePickerOpen(false);
+    try {
+      await saveChatThemeId(nextThemeId);
+    } catch {}
+  }
+
+  function pushLocalSystemMessage(text) {
+    const value = String(text || "").trim();
+    if (!value) return;
+    const id = `system-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setLocalSystemMessages((prev) => [
+      ...prev,
+      { id, message: value, timestamp: new Date().toISOString() }
+    ].slice(-5));
+  }
+
+  useEffect(() => {
     primeSendTone().catch(() => {});
+    ensureNotificationPermission().catch(() => {});
     return () => {
       unloadSendTone().catch(() => {});
     };
@@ -264,6 +318,7 @@ export default function ChatScreen() {
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (state) => {
+      appStateRef.current = state;
       if (state === "active" && senderReady && roomId) {
         try {
           await connectAndJoin({ roomId, senderId, displayName: displayName || null });
@@ -280,6 +335,19 @@ export default function ChatScreen() {
 
     const onReceive = (msg) => {
       if (!msg || String(msg.roomId).toUpperCase() !== roomId) return;
+
+      const from = String(msg?.senderId || "").trim();
+      if (from && from !== senderId && appStateRef.current !== "active") {
+        notifyIncomingMessage({
+          roomId,
+          senderName: msg?.senderName || null,
+          message: msg?.message || ""
+        }).catch(() => {});
+      }
+
+      if (from && from !== senderId && containsCelebration(msg?.message || "")) {
+        triggerConfetti();
+      }
 
       setMessages((prev) => {
         if (msg._id && prev.some((m) => m._id === msg._id)) return prev;
@@ -455,6 +523,7 @@ export default function ChatScreen() {
 
   function handleInputChange(text) {
     setInput(text);
+    setSlashHelperOpen(text.startsWith("/") && text.length <= 12);
     setTyping(true);
 
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -521,8 +590,21 @@ export default function ChatScreen() {
   }
 
   async function onSend() {
-    const text = input.trim();
-    if (!text || !senderReady) return;
+    const raw = input.trim();
+    if (!raw || !senderReady) return;
+
+    const parsed = parseSlashCommand(raw, { displayName });
+
+    if (parsed.kind === "local") {
+      pushLocalSystemMessage(parsed.text);
+      setInput("");
+      setSlashHelperOpen(false);
+      setReplyTo(null);
+      setTyping(false);
+      return;
+    }
+
+    const text = parsed.kind === "send" ? parsed.text : raw;
 
     setIsSending(true);
 
@@ -544,10 +626,15 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, optimistic]);
     setInput("");
+    setSlashHelperOpen(false);
     setReplyTo(null);
     setActiveMessageKey(null);
     setTyping(false);
     nearBottomRef.current = true;
+
+    if (containsCelebration(text)) {
+      triggerConfetti();
+    }
 
     try {
       await sendMessage({ message: text, clientMessageId, replyToMessageId: replyTo?.messageId || null });
@@ -582,7 +669,7 @@ export default function ChatScreen() {
     <View style={styles.container}>
       <LinearGradient
         pointerEvents="none"
-        colors={["#07101D", "#0A172A", "#08101D"]}
+        colors={chatTheme.backgroundGradient}
         style={StyleSheet.absoluteFillObject}
       />
 
@@ -645,6 +732,19 @@ export default function ChatScreen() {
                 <Ionicons name="share-social-outline" size={13} color="#D2E3FF" />
                 <Text style={styles.metaActionText}>Share invite</Text>
               </Pressable>
+
+              <Pressable style={styles.metaAction} onPress={() => setThemePickerOpen(true)}>
+                <Ionicons name="color-palette-outline" size={13} color="#D2E3FF" />
+                <Text style={styles.metaActionText}>Vibe: {chatTheme.label}</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.metaAction}
+                onPress={() => pushLocalSystemMessage(`Try typing a slash command:\n${SLASH_HELP_LINES.join("\n")}`)}
+              >
+                <Ionicons name="happy-outline" size={13} color="#D2E3FF" />
+                <Text style={styles.metaActionText}>Fun help</Text>
+              </Pressable>
             </View>
           </View>
 
@@ -656,6 +756,31 @@ export default function ChatScreen() {
             contentContainerStyle={[styles.listContent, { paddingBottom: composerPaddingBottom }]}
             onScroll={onListScroll}
             scrollEventThrottle={16}
+            ListFooterComponent={
+              localSystemMessages.length > 0 ? (
+                <View style={styles.systemMessageStack}>
+                  {localSystemMessages.map((sys) => (
+                    <View key={sys.id} style={styles.systemMessageRow}>
+                      <View style={styles.systemMessageBubble}>
+                        <View style={styles.systemMessageHeader}>
+                          <Ionicons name="sparkles-outline" size={11} color="#9CFFE2" />
+                          <Text style={styles.systemMessageHeaderText}>System (only you)</Text>
+                          <Pressable
+                            onPress={() =>
+                              setLocalSystemMessages((prev) => prev.filter((x) => x.id !== sys.id))
+                            }
+                            hitSlop={8}
+                          >
+                            <Ionicons name="close" size={12} color="rgba(217,235,255,0.62)" />
+                          </Pressable>
+                        </View>
+                        <Text style={styles.systemMessageText}>{sys.message}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              ) : null
+            }
             renderItem={({ item, index }) => {
               const mine = item.senderId === senderId;
               const time = formatTime(item.timestamp);
@@ -684,6 +809,7 @@ export default function ChatScreen() {
                         replyTo={item.replyTo}
                         reactions={item.reactions}
                         senderId={senderId}
+                        themeId={themeId}
                       />
                     </Pressable>
 
@@ -748,6 +874,17 @@ export default function ChatScreen() {
           )}
 
           <View style={[styles.composerShell, Platform.OS === "android" && { marginBottom: androidKeyboardOffset }]}>
+            {slashHelperOpen && (
+              <View style={styles.slashHelper}>
+                <View style={styles.slashHelperHeader}>
+                  <Ionicons name="terminal-outline" size={12} color="#9CFFE2" />
+                  <Text style={styles.slashHelperTitle}>Slash commands</Text>
+                </View>
+                {SLASH_HELP_LINES.map((line) => (
+                  <Text key={line} style={styles.slashHelperLine}>{line}</Text>
+                ))}
+              </View>
+            )}
             <TypingIndicator typingSenderId={typingSender} />
             <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
               {!!replyTo && (
@@ -812,6 +949,15 @@ export default function ChatScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      <ConfettiBurst visible={confettiOn} onDone={() => setConfettiOn(false)} />
+
+      <ThemePicker
+        visible={themePickerOpen}
+        currentThemeId={themeId}
+        onSelect={applyTheme}
+        onClose={() => setThemePickerOpen(false)}
+      />
     </View>
   );
 }
@@ -907,7 +1053,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6
+    gap: 6,
+    flexWrap: "wrap"
   },
   msgActionBarMine: { justifyContent: "flex-end" },
   msgActionBarTheirs: { justifyContent: "flex-start" },
@@ -1034,5 +1181,70 @@ const styles = StyleSheet.create({
     fontSize: 10,
     paddingHorizontal: 4
   },
-  footerText: { color: "rgba(233,237,241,0.55)", fontSize: 10, flex: 1, textAlign: "right" }
+  footerText: { color: "rgba(233,237,241,0.55)", fontSize: 10, flex: 1, textAlign: "right" },
+
+  systemMessageStack: {
+    marginTop: 4,
+    gap: 6,
+    alignItems: "center"
+  },
+  systemMessageRow: {
+    width: "100%",
+    alignItems: "center"
+  },
+  systemMessageBubble: {
+    maxWidth: "92%",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(124, 255, 221, 0.30)",
+    backgroundColor: "rgba(31, 74, 64, 0.55)"
+  },
+  systemMessageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4
+  },
+  systemMessageHeaderText: {
+    flex: 1,
+    color: "#A5FFE4",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.4
+  },
+  systemMessageText: {
+    color: "#DAFFF1",
+    fontSize: 12,
+    lineHeight: 17
+  },
+
+  slashHelper: {
+    marginHorizontal: 12,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(124, 255, 221, 0.30)",
+    backgroundColor: "rgba(11, 38, 38, 0.85)"
+  },
+  slashHelperHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6
+  },
+  slashHelperTitle: {
+    color: "#A5FFE4",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.4
+  },
+  slashHelperLine: {
+    color: "rgba(218, 255, 241, 0.92)",
+    fontSize: 11,
+    lineHeight: 16
+  }
 });

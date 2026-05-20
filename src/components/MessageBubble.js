@@ -1,8 +1,11 @@
-import { View, Text, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../theme/colors";
+import { getChatTheme } from "../utils/themes";
+import { parseFormattedSegments } from "../utils/textFormat";
 
-function getStatusMeta(status) {
+function getStatusMeta(status, mineTextColor) {
   if (status === "failed") {
     return {
       icon: "alert-circle",
@@ -15,9 +18,9 @@ function getStatusMeta(status) {
   if (status === "sending") {
     return {
       icon: "time-outline",
-      iconColor: "rgba(7, 20, 16, 0.80)",
+      iconColor: mineTextColor,
       label: "Sending",
-      labelColor: "rgba(7, 20, 16, 0.74)"
+      labelColor: mineTextColor
     };
   }
 
@@ -33,7 +36,7 @@ function getStatusMeta(status) {
   if (status === "delivered") {
     return {
       icon: "checkmark-done",
-      iconColor: "rgba(7, 20, 16, 0.62)",
+      iconColor: mineTextColor,
       label: "",
       labelColor: "transparent"
     };
@@ -41,7 +44,7 @@ function getStatusMeta(status) {
 
   return {
     icon: "checkmark",
-    iconColor: "rgba(7, 20, 16, 0.62)",
+    iconColor: mineTextColor,
     label: "",
     labelColor: "transparent"
   };
@@ -71,10 +74,58 @@ function normalizeReactions(raw) {
     .filter(Boolean);
 }
 
-export function MessageBubble({ mine, message, time, status, senderLabel, replyTo, reactions, senderId }) {
-  const bubbleStyle = mine ? styles.mine : styles.theirs;
-  const textStyle = mine ? styles.mineText : styles.theirsText;
-  const meta = getStatusMeta(status);
+function FormattedSpoiler({ value, baseStyle }) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <Text
+      onPress={() => setRevealed((p) => !p)}
+      style={[baseStyle, revealed ? styles.spoilerRevealed : styles.spoilerHidden]}
+    >
+      {revealed ? value : "•".repeat(Math.max(value.length, 4))}
+    </Text>
+  );
+}
+
+function FormattedText({ message, baseStyle }) {
+  const segments = parseFormattedSegments(message);
+  if (segments.length === 0) {
+    return <Text style={baseStyle}>{message}</Text>;
+  }
+
+  return (
+    <Text style={baseStyle}>
+      {segments.map((seg, idx) => {
+        const key = `${seg.type}-${idx}`;
+        if (seg.type === "bold") return <Text key={key} style={styles.bold}>{seg.value}</Text>;
+        if (seg.type === "italic") return <Text key={key} style={styles.italic}>{seg.value}</Text>;
+        if (seg.type === "strike") return <Text key={key} style={styles.strike}>{seg.value}</Text>;
+        if (seg.type === "spoiler") return <FormattedSpoiler key={key} value={seg.value} baseStyle={baseStyle} />;
+        return <Text key={key}>{seg.value}</Text>;
+      })}
+    </Text>
+  );
+}
+
+export function MessageBubble({ mine, message, time, status, senderLabel, replyTo, reactions, senderId, themeId }) {
+  const theme = getChatTheme(themeId);
+
+  const mineBubbleStyle = {
+    backgroundColor: theme.mineBubble,
+    borderColor: theme.mineBubbleBorder
+  };
+  const theirsBubbleStyle = {
+    backgroundColor: theme.theirsBubble,
+    borderColor: theme.theirsBubbleBorder
+  };
+
+  const mineTextStyle = { color: theme.mineText };
+  const theirsTextStyle = { color: theme.theirsText };
+
+  const bubbleStyle = mine ? mineBubbleStyle : theirsBubbleStyle;
+  const textStyle = mine ? mineTextStyle : theirsTextStyle;
+
+  const mineTimeColor = `${theme.mineText}B3`;
+  const meta = getStatusMeta(status, mineTimeColor);
   const reactionList = normalizeReactions(reactions);
   const hasReply = Boolean(replyTo?.message);
   const replyAuthor =
@@ -82,7 +133,7 @@ export function MessageBubble({ mine, message, time, status, senderLabel, replyT
 
   return (
     <View style={[styles.row, { justifyContent: mine ? "flex-end" : "flex-start" }]}>
-      <View style={[styles.bubble, bubbleStyle]}>
+      <View style={[styles.bubble, mine ? styles.mineRadius : styles.theirsRadius, bubbleStyle]}>
         {!mine && (
           <View style={styles.senderRow}>
             <Ionicons name="person-circle-outline" size={13} color="rgba(233,237,241,0.58)" />
@@ -99,9 +150,9 @@ export function MessageBubble({ mine, message, time, status, senderLabel, replyT
             </Text>
           </View>
         )}
-        <Text style={[styles.msg, textStyle]}>{message}</Text>
+        <FormattedText message={message} baseStyle={[styles.msg, textStyle]} />
         <View style={styles.metaRow}>
-          <Text style={[styles.time, mine && styles.timeMine]}>{time}</Text>
+          <Text style={[styles.time, mine && { color: mineTimeColor }]}>{time}</Text>
           {mine && (
             <View style={styles.statusWrap}>
               <Ionicons name={meta.icon} size={13} color={meta.iconColor} />
@@ -141,16 +192,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 2
   },
-  mine: {
-    backgroundColor: "#37E8BA",
-    borderColor: "rgba(7, 23, 18, 0.20)",
-    borderTopRightRadius: 6
-  },
-  theirs: {
-    backgroundColor: "rgba(18, 37, 59, 0.95)",
-    borderColor: "rgba(194, 216, 246, 0.20)",
-    borderTopLeftRadius: 6
-  },
+  mineRadius: { borderTopRightRadius: 6 },
+  theirsRadius: { borderTopLeftRadius: 6 },
   senderRow: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 4 },
   sender: { color: "rgba(233,237,241,0.65)", fontSize: 11, fontWeight: "800" },
   replyBox: {
@@ -174,12 +217,23 @@ const styles = StyleSheet.create({
   replyText: { fontSize: 11, lineHeight: 15 },
   replyTextMine: { color: "rgba(5, 51, 37, 0.72)" },
   replyTextTheirs: { color: "rgba(214, 233, 255, 0.82)" },
-  msg: { fontSize: 14, lineHeight: 19 },
-  mineText: { color: "#053325", fontWeight: "700" },
-  theirsText: { color: "#EAF3FF", fontWeight: "600" },
+  msg: { fontSize: 14, lineHeight: 19, fontWeight: "600" },
+  bold: { fontWeight: "900" },
+  italic: { fontStyle: "italic" },
+  strike: { textDecorationLine: "line-through" },
+  spoilerHidden: {
+    backgroundColor: "rgba(20, 20, 20, 0.85)",
+    color: "rgba(20, 20, 20, 0.85)",
+    borderRadius: 4,
+    overflow: "hidden"
+  },
+  spoilerRevealed: {
+    backgroundColor: "rgba(94, 237, 195, 0.20)",
+    borderRadius: 4,
+    overflow: "hidden"
+  },
   metaRow: { marginTop: 6, flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8 },
   time: { color: "rgba(233,237,241,0.58)", fontSize: 11 },
-  timeMine: { color: "rgba(7, 20, 16, 0.72)" },
   status: { fontSize: 10, fontWeight: "900", letterSpacing: 0.1 },
   statusWrap: { flexDirection: "row", alignItems: "center", gap: 3 },
   reactionRow: { marginTop: 7, flexDirection: "row", flexWrap: "wrap", gap: 6 },

@@ -3,11 +3,14 @@ import { Stack } from "expo-router";
 import { useEffect } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { initNotifications } from "../src/utils/notifications";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   useEffect(() => {
+    initNotifications().catch(() => {});
+
     // Keep native splash until first screen renders.
     const t = setTimeout(() => {
       SplashScreen.hideAsync().catch(() => {});

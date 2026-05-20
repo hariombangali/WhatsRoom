@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const RECENT_ROOMS_KEY = "whatsroom.recentRooms";
 const PROFILE_KEY = "whatsroom.profile";
+const CHAT_THEME_KEY = "whatsroom.chatTheme";
 const MAX_RECENT_ROOMS = 20;
 const ROOM_ID_PATTERN = /^[A-Z0-9]{4,24}$/;
 
@@ -183,5 +184,21 @@ export async function saveDisplayName(displayName) {
   const next = { ...prev, displayName: nextName };
 
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(next));
+  return next;
+}
+
+export async function getChatThemeId() {
+  try {
+    const raw = await AsyncStorage.getItem(CHAT_THEME_KEY);
+    if (!raw) return "default";
+    return String(raw).trim() || "default";
+  } catch {
+    return "default";
+  }
+}
+
+export async function saveChatThemeId(themeId) {
+  const next = String(themeId || "default").trim();
+  await AsyncStorage.setItem(CHAT_THEME_KEY, next);
   return next;
 }

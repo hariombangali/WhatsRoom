@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -25,11 +25,77 @@ import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { TextField } from "../../src/components/TextField";
 import { formatRelativeTime } from "../../src/utils/time";
 import { playClearTone, playDeleteTone, primeActionTone, unloadActionTone } from "../../src/utils/sound";
+import { getRoomMessages } from "../../src/api/rooms";
+import { useSenderId } from "../../src/hooks/useSenderId";
 
 export default function RoomsScreen() {
+  const { senderId, ready: senderReady } = useSenderId();
   const [rooms, setRooms] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState("");
+  const [unreadByRoom, setUnreadByRoom] = useState({});
+  const syncTokenRef = useRef(0);
+
+  const fetchUnreadCountForRoom = useCallback(
+    async (roomId) => {
+      if (!senderReady || !senderId) return 0;
+
+      try {
+        const res = await getRoomMessages(roomId);
+        const list = Array.isArray(res?.messages) ? res.messages : [];
+
+        return list.reduce((count, msg) => {
+          const from = String(msg?.senderId || "").trim();
+          if (!from || from === senderId) return count;
+
+          const seenBy = Array.isArray(msg?.seenBy)
+            ? msg.seenBy
+                .map((x) => String(x || "").trim())
+                .filter(Boolean)
+            : [];
+
+          if (seenBy.includes(senderId)) return count;
+          return count + 1;
+        }, 0);
+      } catch {
+        return 0;
+      }
+    },
+    [senderId, senderReady]
+  );
+
+  const syncUnreadCounts = useCallback(
+    async (recentRooms) => {
+      const list = Array.isArray(recentRooms) ? recentRooms : [];
+      if (!senderReady || !senderId || list.length === 0) {
+        setUnreadByRoom({});
+        return;
+      }
+
+      syncTokenRef.current += 1;
+      const token = syncTokenRef.current;
+
+      const pairs = await Promise.all(
+        list.map(async (item) => {
+          const roomId = String(item?.roomId || "").trim().toUpperCase();
+          if (!roomId) return null;
+          const count = await fetchUnreadCountForRoom(roomId);
+          return [roomId, count];
+        })
+      );
+
+      if (token !== syncTokenRef.current) return;
+
+      const next = {};
+      for (const pair of pairs) {
+        if (!pair) continue;
+        const [roomId, count] = pair;
+        if (count > 0) next[roomId] = count;
+      }
+      setUnreadByRoom(next);
+    },
+    [fetchUnreadCountForRoom, senderId, senderReady]
+  );
 
   const load = useCallback(async () => {
     const r = await getRecentRooms();
@@ -44,6 +110,21 @@ export default function RoomsScreen() {
     useCallback(() => {
       load();
     }, [load])
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!rooms.length || !senderReady || !senderId) return () => {};
+
+      syncUnreadCounts(rooms).catch(() => {});
+      const timer = setInterval(() => {
+        syncUnreadCounts(rooms).catch(() => {});
+      }, 15000);
+
+      return () => {
+        clearInterval(timer);
+      };
+    }, [rooms, senderId, senderReady, syncUnreadCounts])
   );
 
   useEffect(() => {
@@ -67,6 +148,12 @@ export default function RoomsScreen() {
 
   async function openRoom(roomId) {
     await saveRecentRoom(roomId);
+    setUnreadByRoom((prev) => {
+      if (!prev[roomId]) return prev;
+      const next = { ...prev };
+      delete next[roomId];
+      return next;
+    });
     router.push(`/chat/${roomId}`);
   }
 
@@ -89,6 +176,12 @@ export default function RoomsScreen() {
           try {
             await removeRecentRoom(roomId);
             await load();
+            setUnreadByRoom((prev) => {
+              if (!prev[roomId]) return prev;
+              const next = { ...prev };
+              delete next[roomId];
+              return next;
+            });
             playDeleteTone().catch(() => {});
           } catch {
             Alert.alert("Remove failed", "Could not remove room.");
@@ -136,6 +229,14 @@ export default function RoomsScreen() {
           <View style={styles.list}>
             {filteredRooms.map((item) => (
               <Pressable key={item.roomId} style={styles.roomRow} onPress={() => openRoom(item.roomId)}>
+                {!!unreadByRoom[item.roomId] && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadBadgeText}>
+                      {unreadByRoom[item.roomId] > 99 ? "99+" : unreadByRoom[item.roomId]}
+                    </Text>
+                  </View>
+                )}
+
                 <View style={[styles.badge, item.isFavorite && styles.badgeFavorite]}>
                   <Ionicons
                     name={item.isFavorite ? "star" : "key-outline"}
@@ -200,6 +301,7 @@ export default function RoomsScreen() {
             try {
               await clearRecentRooms();
               await load();
+              setUnreadByRoom({});
               playClearTone().catch(() => {});
             } catch {
               Alert.alert("Clear failed", "Could not clear recent rooms.");
@@ -240,6 +342,7 @@ const styles = StyleSheet.create({
 
   list: { marginTop: 12, gap: 10 },
   roomRow: {
+    position: "relative",
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -248,6 +351,27 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(11, 26, 45, 0.76)",
     borderWidth: 1,
     borderColor: "rgba(192, 216, 250, 0.18)"
+  },
+  unreadBadge: {
+    position: "absolute",
+    top: -7,
+    right: -7,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#FF5F7A",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+    zIndex: 5
+  },
+  unreadBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0.2
   },
   badge: {
     width: 34,

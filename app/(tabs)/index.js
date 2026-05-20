@@ -10,7 +10,9 @@ import { colors } from "../../src/theme/colors";
 import { PrimaryButton } from "../../src/components/PrimaryButton";
 import { TextField } from "../../src/components/TextField";
 import { RoomIdCard } from "../../src/components/RoomIdCard";
+import { ConfettiBurst } from "../../src/components/ConfettiBurst";
 import { getDisplayName, getRecentRooms, saveDisplayName, saveRecentRoom } from "../../src/utils/storage";
+import { generateNickname } from "../../src/utils/nicknames";
 
 export default function HomeScreen() {
   const [joinId, setJoinId] = useState("");
@@ -23,6 +25,16 @@ export default function HomeScreen() {
   const [savingName, setSavingName] = useState(false);
 
   const [recentRooms, setRecentRooms] = useState([]);
+  const [confettiOn, setConfettiOn] = useState(false);
+
+  function triggerConfetti() {
+    setConfettiOn(false);
+    requestAnimationFrame(() => setConfettiOn(true));
+  }
+
+  function onSurpriseName() {
+    setDisplayNameDraft(generateNickname());
+  }
 
   const joinIdNormalized = useMemo(() => String(joinId || "").trim().toUpperCase(), [joinId]);
   const quickRooms = useMemo(() => recentRooms.slice(0, 4), [recentRooms]);
@@ -68,6 +80,7 @@ export default function HomeScreen() {
       setCreatedRoomId(res.roomId);
       await saveRecentRoom(res.roomId);
       await loadLocalData();
+      triggerConfetti();
     } catch (e) {
       setError(e?.message || "Failed to create room. Check backend is running.");
     } finally {
@@ -152,14 +165,28 @@ export default function HomeScreen() {
             maxLength={30}
           />
 
-          <PrimaryButton
-            label={savingName ? "Saving..." : displayName ? "Update Name" : "Save Name"}
-            onPress={onSaveDisplayName}
-            disabled={savingName}
-            variant="secondary"
-            leftIcon="save-outline"
-            size="compact"
-          />
+          <View style={styles.profileButtonRow}>
+            <View style={styles.profileButtonItem}>
+              <PrimaryButton
+                label={savingName ? "Saving..." : displayName ? "Update Name" : "Save Name"}
+                onPress={onSaveDisplayName}
+                disabled={savingName}
+                variant="secondary"
+                leftIcon="save-outline"
+                size="compact"
+              />
+            </View>
+            <View style={styles.profileButtonItem}>
+              <PrimaryButton
+                label="Surprise me"
+                onPress={onSurpriseName}
+                disabled={savingName}
+                variant="secondary"
+                leftIcon="sparkles-outline"
+                size="compact"
+              />
+            </View>
+          </View>
 
           <Text style={styles.profileHint}>Current: {displayName || "Anonymous"}</Text>
         </View>
@@ -314,6 +341,8 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <ConfettiBurst visible={confettiOn} onDone={() => setConfettiOn(false)} />
     </LinearGradient>
   );
 }
@@ -355,6 +384,8 @@ const styles = StyleSheet.create({
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 7 },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   cardSub: { marginTop: 7, color: colors.subtext, fontSize: 12, lineHeight: 16 },
+  profileButtonRow: { marginTop: 4, flexDirection: "row", gap: 8 },
+  profileButtonItem: { flex: 1 },
   profileHint: { marginTop: 9, color: "rgba(188, 227, 255, 0.72)", fontSize: 11, fontWeight: "700" },
   buttonMetaRow: { marginTop: 10, flexDirection: "row", gap: 8, flexWrap: "wrap" },
   buttonMetaChip: {

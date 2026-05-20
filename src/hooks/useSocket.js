@@ -130,11 +130,15 @@ export function useSocket() {
     await emitAck(s, "leave-room", undefined).catch(() => {});
   }, [emitAck]);
 
-  const sendMessage = useCallback(async ({ message, clientMessageId }) => {
+  const sendMessage = useCallback(async ({ message, clientMessageId, replyToMessageId } = {}) => {
     const s = socketRef.current;
     if (!s || !s.connected) throw new Error("Offline");
 
-    const ack = await emitAck(s, "send-message", { message, clientMessageId });
+    const ack = await emitAck(s, "send-message", {
+      message,
+      clientMessageId,
+      replyToMessageId: replyToMessageId || null
+    });
     if (ack?.ok) return ack.serverMessage;
     throw new Error(ack?.error || "Send failed");
   }, [emitAck]);
